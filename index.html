@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!-- saved from url=(0050)https://twitter-suppeded-checker.leductam.repl.co/ -->
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check reply and favorite tweet!!</title>
+  <link rel="stylesheet" href="./style/style.css">
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script type="text/javascript">
+    function filterLinks(type = 'person') {
+      const urlRegex = /(https?:\/\/[^\s]*\/status\/[^\s]+)/g;
+      const inputId = type === 'person' ? 'tweet_links' : 'tweet_links_2';
+      const text = document.getElementById(inputId).value;
+      const urls = text.match(urlRegex) || [];
+      const tweetCount = urls.length;
+      document.getElementById(inputId).value = urls.join('\n');
+      if (type === 'person') {
+        document.getElementById('total-tweets').innerHTML = `Total: ${tweetCount}`;
+      } else {
+        document.getElementById('total-tweets_2').innerHTML = `Total: ${tweetCount}`;
+      }
+
+      if (tweetCount === 0) {
+        console.log("No URLs found in the text.");
+      }
+    }
+    function eraseTextArea() {
+      document.getElementById('tweet_links').value = ''
+      document.getElementById('your_tweet_link').value = ''
+      document.getElementById('total-tweets').innerHTML = `Total: ...`
+      document.getElementById('already_reply').value = ``
+      document.getElementById('not_reply').value = ``
+      document.getElementById('already_favorite').value = ``
+      document.getElementById('not_favorite').value = ``
+      document.getElementById('total-not-reply').innerHTML = `Total: ...`
+      document.getElementById('total-reply').innerHTML = `Total: ...`
+      document.getElementById('total-not-favorite').innerHTML = `Total: ...`
+      document.getElementById('total-favorite').innerHTML = `Total: ...`
+    }
+
+    async function startCheck() {
+      document.getElementById('bot-status').innerHTML = `Checking tweet details...`
+      document.getElementById('already_reply').value = ``
+      document.getElementById('not_reply').value = ``
+      document.getElementById('total-not-reply').innerHTML = `Total: ...`
+      document.getElementById('total-reply').innerHTML = `Total: ...`
+      document.getElementById('already_favorite').value = ``
+      document.getElementById('not_favorite').value = ``
+      document.getElementById('total-not-favorite').innerHTML = `Total: ...`
+      document.getElementById('total-favorite').innerHTML = `Total: ...`
+      const interacts = document.getElementById('tweet_links').value.trim().split('\n');
+      const tweetID = document.getElementById('your_tweet_link').value.trim().match(/[0-9]{19}/)[0];
+      const yourTweetUsername = document.getElementById('your_tweet_link').value.trim().match(/https:\/\/([^/]+)\/([A-Za-z0-9_]+)/)[2].toLowerCase();
+      const host = window.location.protocol + "//" + window.location.host;
+      const total_username_reply = (await axios.get(host + '/tweet_reply?tweetID=' + tweetID)).data.usernames.map(e => { return e.toLowerCase() });
+      document.getElementById('bot-status').innerHTML = `Checking favorite details`
+      const total_username_favorite = (await axios.get(host + '/tweet_favorite?tweetID=' + tweetID)).data.usernames.map(e => { return e.toLowerCase() });
+      let user_reply = [];
+      let user_not_reply = [];
+      let user_favorite = [];
+      let user_not_favorite = [];
+      for (const i of interacts) {
+        const regex = /(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/;
+        const match = i.match(regex);
+        const username = match[1].toLowerCase();
+        if (total_username_reply != '') {
+          if (total_username_reply.includes(username)) {
+            console.log(`user: ${username} already reply`)
+            updateTextarea('already_reply', username)
+            user_reply.push(username)
+          } else {
+            if (username !== yourTweetUsername) {
+              updateTextarea('not_reply', username)
+              console.log(`user: ${username} not reply`)
+              user_not_reply.push(username)
+            }
+          }
+          if (total_username_favorite.includes(username)) {
+            console.log(`user: ${username} already favorite`)
+            updateTextarea('already_favorite', username)
+            user_favorite.push(username)
+          } else {
+            if (username !== yourTweetUsername) {
+              updateTextarea('not_favorite', username)
+              console.log(`user: ${username} not favorite`)
+              user_not_favorite.push(username)
+            }
+          }
+        }
+      }
+      const total = document.getElementById('total-tweets').innerHTML.match(/\d+/)[0];
+      document.getElementById('total-reply').innerHTML = `Total: ${user_reply.length}/${total} | ${(user_reply.length / total * 100).toFixed(2)}%`
+      document.getElementById('total-not-reply').innerHTML = `Total: ${user_not_reply.length}/${total} | ${(user_not_reply.length / total * 100).toFixed(2)}%`
+      document.getElementById('total-favorite').innerHTML = `Total: ${user_favorite.length}/${total} | ${(user_favorite.length / total * 100).toFixed(2)}%`
+      document.getElementById('total-not-favorite').innerHTML = `Total: ${user_not_favorite.length}/${total} | ${(user_not_favorite.length / total * 100).toFixed(2)}%`
+      document.getElementById('bot-status').innerHTML = `...`
+    }
+    async function groupCheck() {
+      document.getElementById('already_reply_2').value = ``
+      document.getElementById('not_reply_2').value = ``
+      document.getElementById('total-not-reply_2').innerHTML = `Total: ...`
+      document.getElementById('total-reply_2').innerHTML = `Total: ...`
+      document.getElementById('already_favorite_2').value = ``
+      document.getElementById('not_favorite_2').value = ``
+      document.getElementById('total-not-favorite_2').innerHTML = `Total: ...`
+      document.getElementById('total-favorite_2').innerHTML = `Total: ...`
+      const links = document.getElementById('tweet_links_2').value.trim().split('\n');
+      const host = window.location.protocol + "//" + window.location.host;
+      const total_username = links.map(link => link.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/)[1].toLowerCase());
+      const total_link = links.map(link => link.match(/[0-9]{19}/)[0]);
+      let interacts = {}
+      let usernameReplyTweet = {};
+      let usernameFavoriteTweet = {};
+      for (let index = 0; index < total_link.length; index++) {
+        const tweetID = total_link[index];
+        document.getElementById('bot-status_2').innerHTML = `[${index + 1}/${total_link.length}] checking tweet details ${tweetID}...`;
+        usernameFavoriteTweet[tweetID] = (await axios.get(host + '/tweet_favorite?tweetID=' + tweetID)).data.usernames.map(e => { return e.toLowerCase() });
+        document.getElementById('bot-status_2').innerHTML = `[${index + 1}/${total_link.length}] checking favorite details ${tweetID}`;
+        usernameReplyTweet[tweetID] = (await axios.get(host + '/tweet_reply?tweetID=' + tweetID)).data.usernames.map(e => { return e.toLowerCase() });
+      }
+      console.log(usernameReplyTweet)
+      for (const username of total_username) {
+        for (const link of links) {
+          const owner_username = link.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/)[1].toLowerCase();
+          const tweetID = link.match(/[0-9]{19}/)[0];
+          if (usernameReplyTweet[tweetID] != '') {
+            if (usernameReplyTweet[tweetID].includes(username)) {
+              if (owner_username != username) {
+                updateTextarea('already_reply_2', `User: ${username} | ${link}`)
+                console.log(`User: ${username} | ${link}`)
+              }
+            } else {
+              if (owner_username != username) {
+                updateTextarea('not_reply_2', `User: ${username} | ${link}`)
+                console.log(`User: ${username} | Not reply ${link}`)
+              }
+            }
+
+            if (usernameFavoriteTweet[tweetID].includes(username)) {
+              if (owner_username != username) {
+                updateTextarea('already_favorite_2', `User: ${username} | ${link}`)
+                console.log(`User: ${username} | Already favorite ${link}`)
+              }
+            } else {
+              if (owner_username != username) {
+                updateTextarea('not_favorite_2', `User: ${username} | ${link}`)
+                console.log(`User: ${username} | Not favorite ${link}`)
+              }
+            }
+          }
+        }
+      }
+      const total = document.getElementById('total-tweets_2').innerHTML.match(/\d+/)[0];
+      const user_reply = document.getElementById('already_reply_2').value.trim().split('\n');
+      const user_favorite = document.getElementById('already_favorite_2').value.trim().split('\n');
+      const user_not_reply = document.getElementById('not_reply_2').value.trim().split('\n');
+      const user_not_favorite = document.getElementById('not_favorite_2').value.trim().split('\n');
+      if (user_not_favorite.length > 0 && user_not_favorite[0] != '') document.getElementById('total-not-favorite_2').innerHTML = `Total: ${user_not_favorite.length}`;
+      if (user_not_favorite.length > 0 && user_favorite[0] != '') document.getElementById('total-favorite_2').innerHTML = `Total: ${user_favorite.length}`;
+      if (user_not_favorite.length > 0 && user_not_reply[0] != '') document.getElementById('total-not-reply_2').innerHTML = `Total: ${user_not_reply.length}`;
+      if (user_not_favorite.length > 0 && user_reply[0] != '') document.getElementById('total-reply_2').innerHTML = `Total: ${user_reply.length}`;
+      document.getElementById('bot-status_2').innerHTML = `...`
+    }
+
+    function updateTextarea(textAreaId, message) {
+      var textarea = document.getElementById(textAreaId);
+      var oldContent = textarea.value;
+      if (oldContent !== "") {
+        message = '\n' + message;
+      }
+      var updatedContent = oldContent + message;
+      textarea.value = updatedContent;
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      // Get references to the tab elements
+      const tab1 = document.getElementById('tab1');
+      const tab2 = document.getElementById('tab2');
+
+      // Check if the elements exist before adding event listeners
+      if (tab1 && tab2) {
+        tab1.addEventListener('click', function () {
+          // Remove is-active class from all tabs
+          tab1.classList.remove('is-active');
+          tab2.classList.remove('is-active');
+          document.getElementById('contentTab1').style.display = "block"
+          document.getElementById('contentTab2').style.display = "none"
+
+          // Add is-active class to the clicked tab
+          tab1.classList.add('is-active');
+        });
+
+        tab2.addEventListener('click', function () {
+          document.getElementById('contentTab2').style.display = "block"
+          document.getElementById('contentTab1').style.display = "none"
+          // Remove is-active class from all tabs
+          tab1.classList.remove('is-active');
+          tab2.classList.remove('is-active');
+          // Add is-active class to the clicked tab
+          tab2.classList.add('is-active');
+        });
+      }
+    });
+
+  </script>
+  <style>
+    .block:not(:last-child) {
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+
+
+
+<body>
+  <div class="header">
+    
+    <img class="BG-img" style="width: 150px;height: 150px" src="./style/BG-img.png" style="float:left;">
+    <div class="label">
+      <div class="text-wrapper">HUBS-COMMUNITY</div>
+    </div>
+    <div class="tabs is-center">
+      <ul>
+        <div class="home"><img class="home-icom" src="style/home.svg"></li></div>
+        <li id="tab1" class="is-active" class="text-wrapper"><a>Personal</a></li>
+        <li id="tab2" class="text-wrapper"><a>Group</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box_body">
+
+  
+  <div class="box">
+    <span style="padding-left: 3rem; color: #00F0FF; font-size: 40px; font-family: Roboto; font-weight: 400; word-wrap: break-word">TWITTER</span>
+    <span style="padding-left: 10px;color: white; font-size: 40px; font-family: Roboto; font-weight: 400; word-wrap: break-word"> CHECK</span>
+  </div>
+
+
+  <div id="contentTab1" class="box" style="display: block;">
+    <section class="section">
+      <p class="bd-notification is-primary">Your Link:</p>
+      <input id="your_tweet_link" class="input is-rounded"
+        placeholder="https://twitter.com/leductam2003/status/1715771579349758434"></textarea>
+
+      <div id="total-tweets">Total: ...</div>
+      <p class="bd-notification is-primary">Tweet Links:</p>
+      <textarea id="tweet_links" class="textarea"
+        placeholder="https://twitter.com/leductam2003/status/1715771579349758434"></textarea>
+      <br /><button id="check" onclick="filterLinks()" class="button is-normal">Filter</button>
+      <div class="columns is-vcentered">
+        <div class="column">
+          <div id="total-reply">Total: ...</div>
+          <p class="bd-notification is-primary">Already Reply:</p>
+          <textarea id="already_reply" class="textarea is-success" placeholder="" readonly></textarea>
+        </div>
+
+        <div class="column">
+          <div id="total-not-reply">Total: ...</div>
+          <p class="bd-notification is-primary">Not Reply:</p>
+          <textarea id="not_reply" class="textarea is-danger" placeholder="" readonly></textarea>
+        </div>
+      </div>
+      <div class="columns is-vcentered">
+        <div class="column">
+          <div id="total-favorite">Total: ...</div>
+          <p class="bd-notification is-primary">Already Favorite:</p>
+          <textarea id="already_favorite" class="textarea is-success" placeholder="" readonly></textarea>
+        </div>
+
+        <div class="column">
+          <div id="total-not-favorite">Total: ...</div>
+          <p class="bd-notification is-primary">Not Favorite:</p>
+          <textarea id="not_favorite" class="textarea is-danger" placeholder="" readonly></textarea>
+        </div>
+      </div>
+
+      <button id="check" onclick="startCheck()" class="button is-normal">Check</button>
+
+      <button id="clear" onclick="eraseTextArea()" class="button is-normal">Clear</button>
+      <div class="box">
+        <div id="bot-status" class="message-body">...
+        </div>
+      </div>
+      <br>
+      <p class="subtitle">
+        Check reply and favorite tweet <strong> - leductam</strong> - <a href="https://t.me/leductam2003">Telegram</a> -
+        <a href="https://twitter.com/leductam2003">Twitter</a><br />Address: 0x37BC1d287251978C968d64290Cb94B681bE7e57f
+      </p>
+    </section>
+  </div>
+  <div id="contentTab2" class="box" style="display: none;">
+    <section class="section">
+      <div id="total-tweets_2">Total: ...</div>
+      <p class="bd-notification is-primary">Tweet Links:</p>
+      <textarea id="tweet_links_2" class="textarea"
+        placeholder="https://twitter.com/leductam2003/status/1715771579349758434"></textarea>
+      <br /><button id="check" onclick="filterLinks('group')" class="button is-normal">Filter</button>
+      <div class="column">
+        <div id="total-reply_2">Total: ...</div>
+        <p class="bd-notification is-primary">Already Reply:</p>
+        <textarea id="already_reply_2" class="textarea is-success" placeholder="" readonly></textarea>
+        <div class="column">
+          <div id="total-favorite_2">Total: ...</div>
+          <p class="bd-notification is-primary">Already Favorite:</p>
+          <textarea id="already_favorite_2" class="textarea is-success" placeholder="" readonly></textarea>
+        </div>
+
+        <div class="column">
+          <div id="total-not-reply_2">Total: ...</div>
+          <p class="bd-notification is-primary">Not Reply:</p>
+          <textarea id="not_reply_2" class="textarea is-danger" placeholder="" readonly></textarea>
+        </div>
+        <div class="column">
+          <div id="total-not-favorite_2">Total: ...</div>
+          <p class="bd-notification is-primary">Not Favorite:</p>
+          <textarea id="not_favorite_2" class="textarea is-danger" placeholder="" readonly></textarea>
+        </div>
+      </div>
+
+      <button id="check_2" onclick="groupCheck()" class="button is-normal">Check</button>
+      <button id="clear_2" onclick="eraseTextArea()" class="button is-normal">Clear</button>
+      <div class="box">
+        <div id="bot-status_2" class="message-body">...
+        </div>
+      </div>
+      <br>
+      <p class="subtitle">
+        Check reply and favorite tweet <strong> - leductam</strong> - <a href="https://t.me/leductam2003">Telegram</a> -
+        <a href="https://twitter.com/leductam2003">Twitter</a><br />Address: 0x37BC1d287251978C968d64290Cb94B681bE7e57f
+      </p>
+    </section>
+  </div>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "check-tw",
+  "version": "1.0.0",
+  "main": "index.js",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.5.1",
+    "express": "^4.18.2",
+    "oauth-1.0a": "^2.2.6"
+  },
+  "description": ""
+}
